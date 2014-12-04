@@ -702,7 +702,8 @@ class Pinger(object):
     PING_COMMAND = {'Darwin'  : ["ping", "-o", "-c", "2", "-t", "2"],
                     'Unix'    : ["ping",       "-c", "2", "-w", "2"],
                     'Linux'   : ["ping",       "-c", "2", "-w", "2"],
-                    'Windows' : ["ping",       "-n", "2", "-w", "2"]
+                    'Windows' : ["ping",       "-n", "2", "-w", "2"],
+                    'CYGWIN_NT-6.1-WOW64' : ["ping", "-n", "2", "-w", "2"]
                    }
 
     @classmethod
@@ -710,20 +711,19 @@ class Pinger(object):
         plat_ident = platform.system()
         vector = Pinger.PING_COMMAND[plat_ident][:]
         vector.append(target)
-        bucket = ".ping-bucket"
         result = ""
         try:
-            with open(bucket, 'w') as sink:
-                rc = subprocess.call(vector, stdout=sink, stderr=sink)
-        except:
-            stuff = sys.exc_info()
-            result = stuff[1]
+            proc = subprocess.Popen(vector, shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        except ex:
+            if hasattr(ex, 'child_traceback'):
+                result = ex.child_traceback
+            else:
+                result = str(ex)
         finally:
-            with open(bucket, 'r') as of:
-                result = of.read()
-            os.unlink(bucket)
-
+            rc = proc.wait()
+            result = proc.stdout.read()
         return rc == 0, result
+
 
 ##################################################################################################
 
